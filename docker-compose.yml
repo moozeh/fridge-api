@@ -1,0 +1,33 @@
+# 실행할 서비스(컨테이너)들을 정의
+services:
+    # 서비스 이름 (자유롭게 지정 가능, 예: 'api', 'web')
+    fastapi_server:
+        # 이미지를 빌드하는 방법에 대한 설정
+        build:
+            # 빌드 컨텍스트의 경로 (Dockerfile이 있는 위치)
+            context: .
+            # 사용할 Dockerfile 이름
+            dockerfile: Dockerfile
+        # 컨테이너의 이름을 지정
+        container_name: my_fastapi_container
+        # 포트 매핑 (호스트 포트:컨테이너 포트)
+        # 로컬 PC의 8000번 포트로 오는 요청을 컨테이너의 8000번 포트로 전달
+        ports:
+            - "8000:8000"
+        # 볼륨 마운트 (개발 시 유용)
+        # 로컬의 ./app 디렉토리를 컨테이너의 /app 디렉토리에 연결
+        # 로컬에서 코드를 수정하면 컨테이너에도 즉시 반영됩니다.
+        volumes:
+            - ./app:/app
+        # Dockerfile의 CMD를 덮어쓰는 명령어 (개발 시 유용)
+        # --reload 옵션을 추가하여 코드 변경 시 서버가 자동으로 재시작되도록 합니다.
+        command:
+            [
+                "uvicorn",
+                "main:app",
+                "--host",
+                "0.0.0.0",
+                "--port",
+                "8000",
+                "--reload",
+            ]
