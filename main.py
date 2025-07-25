@@ -10,15 +10,7 @@ from fridge_api import vertex_ai
 from fridge_api.dtos import RecipeRequest
 
 logging.basicConfig(level=logging.INFO)
-
 app = FastAPI()
-
-static_files_path = os.path.join(os.path.dirname(__file__), "frontend", "build", "static")
-app.mount(
-    "/static",
-    StaticFiles(directory=static_files_path),
-    name="static"
-)
 
 @app.post("/api/fridges/analyze")
 async def analyze_fridge(image: UploadFile = File(...)):
@@ -37,12 +29,24 @@ async def create_recipes(data: RecipeRequest):
     response = vertex_ai.generate_from_model(", ".join(ingredients) + prompt.RECIPE_PROMPT)
     
     return response
+# --- 정적 파일 경로 설정 및 검증 (중요!) ---
+# React 빌드 파일이 있는 루트 디렉토리
+# 사용자의 프로젝트 구조에 따라 'spa'가 포함될 수도, 안될 수도 있습니다.
+# 이 경로가 가장 중요합니다.
+build_dir = os.path.join(os.path.dirname(__file__), "frontend", "dist", "spa")
+assets_dir = os.path.join(build_dir, "assets")
 
-# 2. 모든 경로에 대해 React의 index.html을 반환하는 Catch-all 라우트
-#    이 라우트는 항상 모든 API 라우트와 StaticFiles 마운트 다음에 위치해야 합니다.
-@app.get("/{full_path:path}")
-async def serve_react_app(full_path: str):
-    index_path = os.path.join(os.path.dirname(__file__), "frontend", "build", "index.html")
-    if not os.path.exists(index_path):
-        raise HTTPException(status_code=404, detail="React app not found. Did you run 'npm run build'?")
-    return FileResponse(index_path)
+# 서버 시작 시 경로가 올바른지 확인하는 디버깅 코드
+print(f"React build directory: {os.path.abspath(build_dir)}")
+print(f"Assets directory: {os.path.abspath(assets_dir)}")
+
+if not os.path.isdir(build_dir):
+    raise RuntimeError(f"Build directory not found at: {build_dir}")
+if not os.path.isdir(assets_dir):
+    raise RuntimeError(f"Assets directory not found at: {assets_dir}. Did you run 'npm run build'?")
+
+
+# --- 정적 파일 마운트 (API 라우트 다음) ---
+# index.html이 요청하는 '/assets' 경로를 명시적으로 마운트합니다.
+
+app.mount("/", StaticFiles(directory=build_dir, html=True), name="static")
